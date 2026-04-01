@@ -10,6 +10,13 @@ st.set_page_config(page_title="Cabinet FD Expertise", layout="wide")
 
 def process_image(uploaded_file):
     image = Image.open(uploaded_file)
+    
+    # --- CORRECTIF : Conversion pour éviter l'erreur JPEG ---
+    # Si l'image a une couche de transparence (RGBA) ou est en noir et blanc (P/L), 
+    # on la convertit en RGB standard.
+    if image.mode in ("RGBA", "P"):
+        image = image.convert("RGB")
+    
     image.thumbnail((800, 800))
     img_byte_arr = io.BytesIO()
     image.save(img_byte_arr, format='JPEG', quality=70)
