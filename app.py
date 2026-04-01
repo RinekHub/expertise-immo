@@ -7,17 +7,19 @@ import io
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Cabinet FD Expertise", layout="wide")
 
-# --- INITIALISATION ---
-if 'pathos' not in st.session_state:
-    st.session_state.pathos = [{"loc": "", "type": "Fissure structurelle", "grav": "Faible", "obs": ""}]
-if 'rows' not in st.session_state:
-    st.session_state.rows = 4
+# --- FONCTION DE COMPRESSION ---
+def process_image(uploaded_file):
+    try:
+        image = Image.open(uploaded_file)
+        image.thumbnail((800, 800))
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='JPEG', quality=70)
+        return img_byte_arr.getvalue()
+    except: return None
 
-def add_patho():
-    st.session_state.pathos.append({"loc": "", "type": "Fissure structurelle", "grav": "Faible", "obs": ""})
-
-def add_row():
-    st.session_state.rows += 1
+# --- INITIALISATION SESSION ---
+if 'pathos' not in st.session_state: st.session_state.pathos = []
+if 'rows' not in st.session_state: st.session_state.rows = 3
 
 # --- BARRE LATÉRALE ---
 with st.sidebar:
@@ -25,95 +27,112 @@ with st.sidebar:
         st.image("logo.png", use_container_width=True)
     type_fiche = st.radio("Type de Bien", ["Appartement", "Maison"])
     st.markdown("---")
-    menu = st.radio("Navigation", ["Dossier Expertise", "Pathologies & Désordres", "Photos & Docs", "Facturation"])
+    menu = st.radio("Navigation", [
+        "Dossier & Technique", 
+        "Extérieurs & Risques", 
+        "Pathologies", 
+        "Photos & Signature", 
+        "Facturation"
+    ])
 
-st.title(f"📋 {menu} - {type_fiche}")
+st.title(f"📋 {menu}")
 
-# --- ONGLET 1 : DOSSIER EXPERTISE ---
-if menu == "Dossier Expertise":
-    st.subheader("👤 1. Identification")
-    c1, c2 = st.columns(2)
-    with c1:
-        donneur = st.text_input("Donneur d'ordre")
-        adresse = st.text_input("Adresse du bien")
-    with c2:
-        proprio = st.text_input("Propriétaire")
-        ville = st.text_input("Ville / CP")
-
-    st.markdown("---")
-    st.subheader(f"🏠 2. Caractéristiques {type_fiche}")
-    ci1, ci2 = st.columns(2)
-    with ci1:
-        facteur_annee = st.text_input("Facteur Année (Construction/Rénovation)")
-        nb_etages = st.text_input("Nombre d'étages / Niveaux")
-    with ci2:
-        if type_fiche == "Appartement":
-            st.text_input("Nom du Syndic")
-            st.text_input("Contact Syndic")
+# --- SECTION 1 : DOSSIER & TECHNIQUE ---
+if menu == "Dossier & Technique":
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("👤 Identification")
+        st.text_input("Donneur d'ordre")
+        addr = st.text_input("Adresse du bien")
+        if addr:
+            st.markdown(f"[📍 Voir sur Google Maps](https://www.google.com/maps/search/{addr.replace(' ', '+')})")
+    with col2:
+        st.subheader("🏢 Caractéristiques")
+        st.text_input("Année de construction")
+        if type_fiche == "Maison":
+            st.radio("Copropriété ?", ["Non", "Oui"], horizontal=True)
         else:
-            is_copro = st.radio("La maison est-elle en copropriété ?", ["Non", "Oui"], horizontal=True)
-            if is_copro == "Oui":
-                st.text_input("Nom du Syndic / Association")
-                st.text_input("Montant des charges annuelles")
-
-    st.subheader(f"🌳 3. État des {'parties communes' if type_fiche == 'Appartement' else 'extérieurs'}")
-    st.selectbox("Niveau d'état général", ["Bon standing", "Standing moyen", "Faible qualité", "Vétuste"])
-    st.multiselect("Sous-critères", ["Ascenseur", "Portail", "Jardin", "Gardien", "Local vélo"], placeholder="Sélectionnez")
+            st.text_input("Nom du Syndic")
 
     st.markdown("---")
-    st.subheader("🛠️ 4. Caractéristiques Techniques")
+    st.subheader("🛠️ Technique & Énergie")
     t1, t2 = st.columns(2)
     with t1:
-        st.selectbox("État des menuiseries", ["Bon état", "Moyen", "Vétuste"])
-        st.multiselect("Vitrages & Matériaux", ["PVC Simple vitrage", "PVC Double vitrage", "Aluminium", "Bois"], placeholder="Choisir")
-        st.selectbox("Énergie Chauffage", ["Gaz", "Électricité", "Fuel", "Chaudière électrique", "Pompe à chaleur"])
+        st.multiselect("Matériaux Menuiseries", ["PVC", "Aluminium", "Bois"], key="mat")
+        st.selectbox("Vitrage", ["Simple", "Double", "Double Phonique", "Triple"])
     with t2:
-        if type_fiche == "Appartement":
-            st.selectbox("Production Eau Chaude", ["Individuelle", "Collective"])
-        else:
-            st.selectbox("Production Eau Chaude", ["Chaudière Gaz", "Ballon électrique", "Solaire"])
-        st.selectbox("Situation Locative", ["Libre", "Occupé", "Meublé"])
+        st.selectbox("Chauffage", ["Gaz", "Élec", "Fuel", "PAC", "Bois"])
+        st.selectbox("Eau Chaude", ["Cumulus", "Chaudière", "Solaire", "Thermodynamique"])
 
-    st.subheader("📦 5. Annexes & Notes")
-    st.multiselect("Annexes", ["Cave", "Box", "Garage", "Terrasse"], placeholder="Choisir")
-    st.text_area("Zone de commentaire libre")
+# --- SECTION 2 : EXTÉRIEURS & RISQUES ---
+elif menu == "Extérieurs & Risques":
+    st.subheader("🏡 Aménagements Extérieurs")
+    e1, e2 = st.columns(2)
+    with e1:
+        st.multiselect("Éléments", ["Clôture", "Portail Élec", "Arrosage", "Puits", "Cuisine d'été"])
+        st.selectbox("Piscine", ["Aucune", "Enterrée", "Hors-sol"])
+    with e2:
+        st.multiselect("Annexes", ["Garage", "Cave", "Abri", "Carport", "Terrasse"])
 
     st.markdown("---")
-    st.subheader("📏 6. Tableau des Surfaces")
-    for i in range(st.session_state.rows):
-        sc1, sc2, sc3 = st.columns([2, 1, 2])
-        with sc1: st.text_input(f"Pièce {i+1}", key=f"p{i}")
-        with sc2: st.number_input("m²", key=f"m{i}", step=0.01)
-        with sc3: st.text_input("Notes", key=f"r{i}")
-    st.button("➕ Ajouter une pièce", on_click=add_row)
+    st.subheader("🚫 État des Risques (ERP)")
+    r1, r2 = st.columns(2)
+    with r1:
+        st.selectbox("Zone Sismique", ["1 (Très faible)", "2 (Faible)", "3 (Modéré)", "4 (Moyen)", "5 (Fort)"])
+        st.selectbox("Retrait-Gonflement Argiles", ["Nul", "Faible", "Moyen", "Fort"])
+    with r2:
+        st.checkbox("Zone Inondable")
+        st.checkbox("Plan d'Exposition au Bruit (PEB)")
+        st.checkbox("Risque Radon")
 
-# --- ONGLET 2 : PATHOLOGIES ---
-elif menu == "Pathologies & Désordres":
-    st.subheader("⚠️ Relevé des Pathologies")
+# --- SECTION 3 : PATHOLOGIES ---
+elif menu == "Pathologies":
+    st.subheader("⚠️ Diagnostic des Désordres")
+    if st.button("➕ Ajouter un désordre"):
+        st.session_state.pathos.append({"loc": "", "type": "Fissure", "grav": "Faible"})
+    
     for idx, p in enumerate(st.session_state.pathos):
         with st.expander(f"Désordre n°{idx+1}", expanded=True):
-            c1, c2, c3 = st.columns([2, 2, 1])
-            with c1:
-                st.session_state.pathos[idx]["loc"] = st.text_input("Localisation", key=f"loc_{idx}")
-            with c2:
-                st.session_state.pathos[idx]["type"] = st.selectbox("Type", ["Fissure", "Humidité", "Infiltration", "Vétusté"], key=f"type_{idx}")
-            with c3:
-                st.session_state.pathos[idx]["grav"] = st.select_slider("Gravité", options=["Faible", "Moyenne", "Critique"], key=f"grav_{idx}")
-            st.session_state.pathos[idx]["obs"] = st.text_area("Observations", key=f"obs_{idx}")
-    st.button("➕ Ajouter un désordre", on_click=add_patho)
+            c1, c2, c3 = st.columns([2,2,1])
+            with c1: st.text_input("Localisation", key=f"l_{idx}")
+            with c2: st.selectbox("Type", ["Fissure", "Humidité", "Vétusté", "Termites"], key=f"t_{idx}")
+            with c3: st.select_slider("Gravité", options=["🟢", "🟡", "🔴"], key=f"g_{idx}")
+            st.text_area("Observations", key=f"o_{idx}")
+            if st.button("Supprimer", key=f"d_{idx}"):
+                st.session_state.pathos.pop(idx)
+                st.rerun()
 
-# --- ONGLET 3 : PHOTOS ---
-elif menu == "Photos & Docs":
-    st.subheader("📸 Photos")
-    st.file_uploader("Prendre une photo", accept_multiple_files=True, type=['jpg', 'jpeg', 'png'])
+# --- SECTION 4 : PHOTOS & SIGNATURE ---
+elif menu == "Photos & Signature":
+    st.subheader("📸 Reportage Photographique")
+    st.file_uploader("Prendre des photos", accept_multiple_files=True, type=['png', 'jpg', 'jpeg'])
+    
+    st.markdown("---")
+    st.subheader("✍️ Signature du Client / Donneur d'ordre")
+    st.info("Le client peut signer directement ci-dessous avec son doigt ou un stylet.")
+    # Zone de signature (Note: En pur Streamlit standard, on utilise un champ de dépôt ou un canvas)
+    st.text_input("Nom du signataire")
+    st.file_uploader("Importer une capture de signature (si nécessaire)", type=['png'])
 
-# --- ONGLET 4 : FACTURATION ---
+# --- SECTION 5 : FACTURATION ---
 elif menu == "Facturation":
-    st.subheader("💰 Facturation")
-    h1, h2 = st.columns(2)
-    with h1: st.number_input("Honoraires HT (€)", value=0.0)
-    with h2: st.number_input("Frais déplacement (€)", value=0.0)
+    st.subheader("💰 Calcul des Honoraires")
+    f1, f2 = st.columns(2)
+    with f1:
+        hono = st.number_input("Honoraires HT (€)", value=0.0)
+        km = st.number_input("Distance parcourue (km Aller-Retour)", value=0)
+    with f2:
+        tarif_km = st.number_input("Tarif IK (€/km)", value=0.60)
+        frais_fixes = st.number_input("Autres frais (€)", value=0.0)
+    
+    total_ik = km * tarif_km
+    total_ht = hono + total_ik + frais_fixes
+    st.metric("Total Indemnités Kilométriques", f"{total_ik:.2f} €")
+    st.metric("TOTAL HT", f"{total_ht:.2f} €")
+    if st.checkbox("Appliquer TVA 20%"):
+        st.metric("TOTAL TTC", f"{total_ht * 1.2:.2f} €")
 
 st.markdown("---")
-if st.button("💾 ENREGISTRER L'EXPERTISE"):
+if st.button("💾 CLÔTURER L'EXPERTISE ET ENREGISTRER"):
     st.balloons()
+    st.success("Toutes les sections sont complétées. Prêt pour le PDF !")
