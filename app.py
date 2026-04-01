@@ -7,20 +7,19 @@ import io
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Cabinet FD Expertise", layout="wide")
 
-# --- INITIALISATION DES VARIABLES (Pour ne rien perdre en changeant d'onglet) ---
+# --- INITIALISATION ---
 if 'pathos' not in st.session_state:
     st.session_state.pathos = [{"loc": "", "type": "Fissure structurelle", "grav": "Faible", "obs": ""}]
 if 'rows' not in st.session_state:
     st.session_state.rows = 4
 
-# --- FONCTIONS ---
 def add_patho():
     st.session_state.pathos.append({"loc": "", "type": "Fissure structurelle", "grav": "Faible", "obs": ""})
 
 def add_row():
     st.session_state.rows += 1
 
-# --- INTERFACE BARRE LATÉRALE ---
+# --- BARRE LATÉRALE ---
 with st.sidebar:
     if os.path.exists("logo.png"):
         st.image("logo.png", use_container_width=True)
@@ -30,19 +29,17 @@ with st.sidebar:
 
 st.title(f"📋 {menu} - {type_fiche}")
 
-# --- ONGLET 1 : DOSSIER EXPERTISE (COMPLET) ---
+# --- ONGLET 1 : DOSSIER EXPERTISE ---
 if menu == "Dossier Expertise":
-    # 1. Identification
     st.subheader("👤 1. Identification")
     c1, c2 = st.columns(2)
     with c1:
-        donneur = st.text_input("Donneur d'ordre", placeholder="M. / Mme ...")
+        donneur = st.text_input("Donneur d'ordre")
         adresse = st.text_input("Adresse du bien")
     with c2:
         proprio = st.text_input("Propriétaire")
         ville = st.text_input("Ville / CP")
 
-    # 2. Caractéristiques Immeuble / Maison
     st.markdown("---")
     st.subheader(f"🏠 2. Caractéristiques {type_fiche}")
     ci1, ci2 = st.columns(2)
@@ -51,47 +48,36 @@ if menu == "Dossier Expertise":
         nb_etages = st.text_input("Nombre d'étages / Niveaux")
     with ci2:
         if type_fiche == "Appartement":
-            nom_syndic = st.text_input("Nom du Syndic")
-            contact_syndic = st.text_input("Contact Syndic")
+            st.text_input("Nom du Syndic")
+            st.text_input("Contact Syndic")
         else:
             is_copro = st.radio("La maison est-elle en copropriété ?", ["Non", "Oui"], horizontal=True)
             if is_copro == "Oui":
-                nom_syndic_maison = st.text_input("Nom du Syndic / Association")
-                charges_maison = st.text_input("Montant des charges annuelles")
+                st.text_input("Nom du Syndic / Association")
+                st.text_input("Montant des charges annuelles")
 
-    # 3. Parties Communes / Extérieurs
     st.subheader(f"🌳 3. État des {'parties communes' if type_fiche == 'Appartement' else 'extérieurs'}")
-    etat_pc = st.selectbox("Niveau d'état général", ["Bon standing", "Standing moyen", "Faible qualité", "Vétuste"])
-    if type_fiche == "Appartement":
-        sous_criteres_pc = st.multiselect("Sous-critères", ["Ascenseur", "Interphone", "Espaces verts", "Gardien", "Local vélo"], placeholder="Sélectionnez les équipements")
-    else:
-        sous_criteres_pc = st.multiselect("Sous-critères Maison", ["Clôture", "Portail électrique", "Piscine", "Dépendance", "Jardin"], placeholder="Sélectionnez les équipements")
+    st.selectbox("Niveau d'état général", ["Bon standing", "Standing moyen", "Faible qualité", "Vétuste"])
+    st.multiselect("Sous-critères", ["Ascenseur", "Portail", "Jardin", "Gardien", "Local vélo"], placeholder="Sélectionnez")
 
-    # 4. Technique
     st.markdown("---")
     st.subheader("🛠️ 4. Caractéristiques Techniques")
     t1, t2 = st.columns(2)
     with t1:
-        etat_menuis = st.selectbox("État des menuiseries", ["Bon état", "Moyen", "Vétuste"])
-        type_vitrage = st.multiselect("Type de vitrage & Matériaux", [
-            "PVC Simple vitrage", "PVC Double vitrage", "Aluminium", "Bois", "Double vitrage phonique", "Triple vitrage"
-        ], placeholder="Choisir les types")
-        energie = st.selectbox("Énergie Chauffage", ["Gaz", "Électricité", "Fuel", "Chaudière électrique", "Pompe à chaleur", "Bois/Granulés"])
-        distrib = st.selectbox("Distribution", ["Radiateurs", "Plancher chauffant", "Clim réversible", "Convecteurs"])
+        st.selectbox("État des menuiseries", ["Bon état", "Moyen", "Vétuste"])
+        st.multiselect("Vitrages & Matériaux", ["PVC Simple vitrage", "PVC Double vitrage", "Aluminium", "Bois"], placeholder="Choisir")
+        st.selectbox("Énergie Chauffage", ["Gaz", "Électricité", "Fuel", "Chaudière électrique", "Pompe à chaleur"])
     with t2:
         if type_fiche == "Appartement":
-            eau_type = st.selectbox("Production Eau Chaude", ["Individuelle", "Collective"])
-            eau_source = st.selectbox("Source Eau Chaude", ["Chaudière Gaz", "Cumulus Élec", "Chauffage Distri"])
+            st.selectbox("Production Eau Chaude", ["Individuelle", "Collective"])
         else:
-            eau_source = st.selectbox("Production Eau Chaude", ["Chaudière Gaz", "Ballon électrique (Cumulus)", "Thermodynamique", "Solaire"])
-        sit_loc = st.selectbox("Situation Locative", ["Libre", "Occupé (Bail)", "Meublé", "Saisonnier"], placeholder="Choisir la situation")
+            st.selectbox("Production Eau Chaude", ["Chaudière Gaz", "Ballon électrique", "Solaire"])
+        st.selectbox("Situation Locative", ["Libre", "Occupé", "Meublé"])
 
-    # 5. Annexes & Commentaires
     st.subheader("📦 5. Annexes & Notes")
-    annexes = st.multiselect("Annexes", ["Cave", "Box", "Garage", "Terrasse", "Grenier", "Abri de jardin"], placeholder="Choisir une ou plusieurs options")
-    commentaires = st.text_area("Zone de commentaire libre (Observations générales)")
+    st.multiselect("Annexes", ["Cave", "Box", "Garage", "Terrasse"], placeholder="Choisir")
+    st.text_area("Zone de commentaire libre")
 
-    # 6. Tableau des Surfaces (À LA FIN)
     st.markdown("---")
     st.subheader("📏 6. Tableau des Surfaces")
     for i in range(st.session_state.rows):
@@ -105,4 +91,29 @@ if menu == "Dossier Expertise":
 elif menu == "Pathologies & Désordres":
     st.subheader("⚠️ Relevé des Pathologies")
     for idx, p in enumerate(st.session_state.pathos):
-        with st.expander(f"Dés
+        with st.expander(f"Désordre n°{idx+1}", expanded=True):
+            c1, c2, c3 = st.columns([2, 2, 1])
+            with c1:
+                st.session_state.pathos[idx]["loc"] = st.text_input("Localisation", key=f"loc_{idx}")
+            with c2:
+                st.session_state.pathos[idx]["type"] = st.selectbox("Type", ["Fissure", "Humidité", "Infiltration", "Vétusté"], key=f"type_{idx}")
+            with c3:
+                st.session_state.pathos[idx]["grav"] = st.select_slider("Gravité", options=["Faible", "Moyenne", "Critique"], key=f"grav_{idx}")
+            st.session_state.pathos[idx]["obs"] = st.text_area("Observations", key=f"obs_{idx}")
+    st.button("➕ Ajouter un désordre", on_click=add_patho)
+
+# --- ONGLET 3 : PHOTOS ---
+elif menu == "Photos & Docs":
+    st.subheader("📸 Photos")
+    st.file_uploader("Prendre une photo", accept_multiple_files=True, type=['jpg', 'jpeg', 'png'])
+
+# --- ONGLET 4 : FACTURATION ---
+elif menu == "Facturation":
+    st.subheader("💰 Facturation")
+    h1, h2 = st.columns(2)
+    with h1: st.number_input("Honoraires HT (€)", value=0.0)
+    with h2: st.number_input("Frais déplacement (€)", value=0.0)
+
+st.markdown("---")
+if st.button("💾 ENREGISTRER L'EXPERTISE"):
+    st.balloons()
