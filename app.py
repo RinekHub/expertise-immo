@@ -119,4 +119,53 @@ elif menu == "3. Diagnostic Pathologies":
 # --- SECTION 4 : PHOTOS & SIGNATURE ---
 elif menu == "4. Photos & Signature":
     st.subheader("📸 Validation")
-    st.
+    st.file_uploader("Upload compressé (Pillow)", accept_multiple_files=True, type=['jpg', 'png'])
+    st.text_input("Nom du signataire", key="s_nom")
+
+# --- SECTION 5 : FACTURATION TTC ---
+elif menu == "5. Facturation TTC":
+    st.subheader("💰 Calculateur d'honoraires")
+    f1, f2 = st.columns(2)
+    with f1:
+        hono_ttc = st.number_input("Honoraires Expertise TTC (€)", value=0.0)
+        dist = st.number_input("Distance KM (Aller/Retour)", value=0)
+    with f2:
+        tarif_km = st.number_input("Tarif KM TTC (€/km)", value=0.60)
+    
+    ik_total = dist * tarif_km
+    total_general_ttc = hono_ttc + ik_total
+    total_ht = total_general_ttc / 1.2
+    
+    st.markdown("---")
+    st.metric("TOTAL GÉNÉRAL TTC", f"{total_general_ttc:.2f} €")
+    st.write(f"Dont Indemnités Kilométriques : {ik_total:.2f} €")
+    st.info(f"Rappel Montant Hors Taxes (HT) : {total_ht:.2f} €")
+    st.session_state["final_ttc"] = total_general_ttc
+
+# --- SECTION 6 : LE DOCUMENT FINAL ---
+st.markdown("---")
+if st.button("📄 ÉDITER LE COMPTE-RENDU DE VISITE"):
+    try:
+        pdf = PDF()
+        pdf.add_page()
+        
+        pdf.section_header(1, "DOSSIER & TECHNIQUE")
+        pdf.add_data("Client", st.session_state.get('d_client'))
+        pdf.add_data("Adresse", st.session_state.get('d_adr'))
+        pdf.add_data("Chauffage", st.session_state.get('d_chauff'))
+        
+        pdf.section_header(2, "EXTÉRIEURS & RISQUES")
+        pdf.add_data("Sismique", st.session_state.get('e_sis'))
+        pdf.add_data("Piscine", st.session_state.get('e_pisc'))
+        
+        pdf.section_header(3, "PATHOLOGIES")
+        for p in st.session_state.pathos:
+            pdf.add_data(f"Désordre {p['type']}", f"{p['loc']} - {p['grav']}")
+            
+        pdf.section_header(4, "FACTURATION")
+        pdf.add_data("TOTAL TTC", f"{st.session_state.get('final_ttc', 0):.2f} Euros")
+
+        res = pdf.output(dest='S').encode('latin-1', 'replace')
+        st.download_button("📥 TÉLÉCHARGER LE RAPPORT", res, "Expertise.pdf", "application/pdf")
+    except Exception as e:
+        st.error(f"Erreur lors de l'édition : {e}")
