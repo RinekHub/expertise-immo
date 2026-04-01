@@ -17,41 +17,42 @@ def process_image(uploaded_file):
     image.save(img_byte_arr, format='JPEG', quality=70)
     return img_byte_arr.getvalue()
 
-# --- CLASSE PDF AMÉLIORÉE ---
+# --- CLASSE PDF MISE À JOUR (LOGO FORCE) ---
 class PDF(FPDF):
     def header(self):
-        if os.path.exists("logo.png"):
+        # On cherche le logo dans le dossier racine
+        logo_path = "logo.png"
+        
+        if os.path.exists(logo_path):
             try:
-                img = Image.open("logo.png")
-                if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+                # 1. Ouvrir avec Pillow pour garantir la compatibilité
+                img = Image.open(logo_path)
+                
+                # 2. Convertir en RGB (indispensable pour FPDF/JPEG)
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                
+                # 3. Créer un flux mémoire
                 img_temp = io.BytesIO()
                 img.save(img_temp, format='JPEG')
                 img_temp.seek(0)
-                self.image(img_temp, 10, 8, 33, type='JPEG')
-            except:
+                
+                # 4. Insérer dans le PDF (Position x=10, y=8, largeur=33)
+                self.image(img_temp, 10, 8, 33)
+                self.ln(10) # Espace après le logo
+            except Exception as e:
+                # En cas d'erreur technique, on affiche au moins le texte
                 self.set_font('Arial', 'B', 12)
-                self.cell(0, 10, 'FD EXPERTISE', 0, 0, 'L')
+                self.cell(0, 10, 'FD EXPERTISE (Logo Error)', 0, 1, 'L')
+        else:
+            # Si le fichier logo.png n'est pas trouvé du tout
+            self.set_font('Arial', 'B', 12)
+            self.cell(0, 10, 'CABINET FD EXPERTISE', 0, 1, 'L')
+            
         self.set_font('Arial', 'B', 14)
+        self.set_text_color(40, 40, 40)
         self.cell(0, 10, 'COMPTE-RENDU DE VISITE TECHNIQUE', 0, 1, 'C')
-        self.ln(10)
-
-    def section_header(self, num, label):
-        self.set_font('Arial', 'B', 11)
-        self.set_fill_color(230, 230, 230)
-        # Nettoyage strict pour éviter l'AttributeError sur les accents
-        clean_label = str(label).encode('latin-1', 'replace').decode('latin-1')
-        self.cell(0, 8, f" {num}. {clean_label}", 0, 1, 'L', 1)
-        self.ln(2)
-
-    def add_data(self, label, value):
-        self.set_font('Arial', 'B', 9)
-        lbl = f"{str(label)} : ".encode('latin-1', 'replace').decode('latin-1')
-        self.write(5, lbl)
-        self.set_font('Arial', '', 9)
-        # Si la valeur est vide, on met "---"
-        val_str = str(value) if value else "---"
-        val = val_str.encode('latin-1', 'replace').decode('latin-1')
-        self.write(5, f"{val}\n")
+        self.ln(5)
 
 # --- INITIALISATION ---
 if 'pathos' not in st.session_state: st.session_state.pathos = []
