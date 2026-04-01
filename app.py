@@ -17,7 +17,7 @@ st.markdown("""
 with st.sidebar:
     if os.path.exists("logo.png"):
         st.image("logo.png", use_container_width=True)
-    type_fiche = st.radio("Type de Bien", ["Appt", "M"])
+    type_fiche = st.radio("Type de Bien", ["Appt", "Maison"])
     st.markdown("---")
     menu = st.radio("Navigation", ["Dossier Expertise", "Photos & Docs"])
 
@@ -44,7 +44,7 @@ if menu == "Dossier Expertise":
         facteur_annee = st.text_input("Facteur Année (Construction/Rénovation)")
         nb_etages = st.text_input("Nombre d'étages")
     with col_imm2:
-        st.write("**Gestion Syndic** (Proposé ici)")
+        st.write("**Gestion Syndic**")
         nom_syndic = st.text_input("Nom du Syndic")
         contact_syndic = st.text_input("Contact / Tél Syndic")
     st.markdown('</div>', unsafe_allow_html=True)
