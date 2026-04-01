@@ -4,22 +4,22 @@ from fpdf import FPDF
 from PIL import Image
 import io
 
-# --- CONFIGURATION ---
+# --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Cabinet FD Expertise", layout="wide")
 
-# --- CLASSE PDF SÉCURISÉE ---
+# --- 2. CLASSE PDF (La "machine" qui crée le document) ---
 class PDF(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
             self.image("logo.png", 10, 8, 33)
         self.set_font('Arial', 'B', 14)
+        self.set_text_color(40, 40, 40)
         self.cell(0, 10, 'COMPTE-RENDU DE VISITE TECHNIQUE', 0, 1, 'C')
         self.ln(10)
 
     def section_header(self, label):
         self.set_font('Arial', 'B', 11)
-        self.set_fill_color(220, 220, 220)
-        # Sécurité pour les accents dans les titres
+        self.set_fill_color(230, 230, 230)
         txt = label.encode('latin-1', 'replace').decode('latin-1')
         self.cell(0, 8, f" {txt}", 0, 1, 'L', 1)
         self.ln(2)
@@ -32,159 +32,158 @@ class PDF(FPDF):
         val = str(value).encode('latin-1', 'replace').decode('latin-1')
         self.write(5, f"{val}\n")
 
-# --- INITIALISATION DES VARIABLES ---
-if 'pathos' not in st.session_state: st.session_state.pathos = []
-if 'pieces' not in st.session_state: st.session_state.pieces = [{"nom": "", "surface": 0.0, "note": ""}]
+# --- 3. INITIALISATION DU TABLEAU DES SURFACES ---
+if 'rows' not in st.session_state:
+    st.session_state.rows = 4
 
-# --- BARRE LATÉRALE ---
+# --- 4. BARRE LATÉRALE (NAVIGATION) ---
 with st.sidebar:
-    if os.path.exists("logo.png"): 
+    if os.path.exists("logo.png"):
         st.image("logo.png", use_container_width=True)
-    st.title("Menu Expertise")
-    menu = st.radio("Navigation", [
-        "1. Dossier & Technique (Fusion)", 
-        "2. Extérieurs & Risques ERP", 
-        "3. Diagnostic Pathologies", 
-        "4. Tableau des Surfaces",
-        "5. Photos & Signature",
-        "6. Facturation TTC"
-    ])
+    st.title("FD Expertise")
+    type_fiche = st.radio("Type de Bien", ["Appartement", "Maison"])
     st.markdown("---")
-    type_bien = st.radio("Nature du bien :", ["Maison Individuelle", "Appartement"])
+    menu = st.radio("Navigation", [
+        "1. Dossier Technique", 
+        "2. Risques ERP", 
+        "3. Photos & Docs", 
+        "4. Pathologies & Facture"
+    ])
 
-st.title(f"📑 {menu}")
+st.title(f"📋 Expertise {type_fiche}")
 
-# La consigne pour les menus déroulants
+# Texte personnalisé pour les menus déroulants
 txt_choix = "Choisissez une ou plusieurs options"
 
-# --- 1. DOSSIER & TECHNIQUE ---
-if menu == "1. Dossier & Technique (Fusion)":
-    st.subheader("👤 Identification & 🛠️ Technique")
+# --- 5. SECTION 1 : DOSSIER TECHNIQUE ---
+if menu == "1. Dossier Technique":
+    st.subheader("👤 1. Identification")
     c1, c2 = st.columns(2)
     with c1:
-        st.text_input("Donneur d'ordre / Client", key="f_donneur")
-        st.text_input("Propriétaire", key="f_proprio")
-        st.text_input("Adresse complète", key="f_addr")
-        st.text_input("Ville / CP", key="f_ville")
+        st.text_input("Donneur d'ordre / Client", key="f_client")
+        st.text_input("Adresse du bien", key="f_adresse")
     with c2:
-        st.text_input("Année de construction", key="f_annee")
-        st.text_input("Nombre de niveaux", key="f_niveaux")
-        if type_bien == "Appartement":
+        st.text_input("Propriétaire", key="f_proprio")
+        st.text_input("Ville / CP", key="f_ville")
+
+    st.markdown("---")
+    st.subheader("🏠 2. Caractéristiques & État Technique")
+    ci1, ci2 = st.columns(2)
+    with ci1:
+        st.text_input("Année de construction / Rénovation", key="f_annee")
+        st.text_input("Nombre d'étages / Niveaux", key="f_niveaux")
+        st.selectbox("État des menuiseries", ["Excellent", "Bon état", "Moyen", "Vétuste"], key="f_etat_m")
+        # LA DEMANDE : PVC Simple et Double vitrage bien listés
+        st.multiselect("Type de vitrage & Matériaux", [
+            "PVC Simple vitrage", "PVC Double vitrage", 
+            "Aluminium Simple vitrage", "Aluminium Double vitrage", 
+            "Bois Simple vitrage", "Bois Double vitrage",
+            "Double vitrage phonique", "Triple vitrage", "Mixte Bois/Alu"
+        ], placeholder=txt_choix, key="f_vitre")
+    
+    with ci2:
+        if type_fiche == "Appartement":
             st.text_input("Nom du Syndic", key="f_syndic")
         else:
-            st.radio("En lotissement / ASL ?", ["Non", "Oui"], key="f_asl")
+            is_copro = st.radio("Le bien est-il en copropriété / ASL ?", ["Non", "Oui"], horizontal=True)
+            if is_copro == "Oui":
+                st.text_input("Nom du Syndic / Association", key="f_syndic_m")
+        
+        st.selectbox("Énergie Chauffage", ["Gaz", "Électricité", "Fuel", "Pompe à chaleur", "Bois", "Solaire"], key="f_chauff")
+        st.selectbox("Distribution", ["Radiateurs", "Plancher chauffant", "Clim réversible", "Convecteurs"], key="f_distri")
+        st.selectbox("Situation Locative", ["Libre de toute occupation", "Occupé", "Meublé", "Saisonnier"], key="f_loc")
 
     st.markdown("---")
-    t1, t2 = st.columns(2)
-    with t1:
-        # Lignes PVC demandées incluses ici
-        st.multiselect("Matériaux et Vitrages", [
-            "PVC Simple vitrage", 
-            "PVC Double vitrage", 
-            "Aluminium Simple vitrage",
-            "Aluminium Double vitrage",
-            "Bois Simple vitrage",
-            "Bois Double vitrage",
-            "Double vitrage phonique",
-            "Triple vitrage",
-            "Mixte Bois/Alu",
-            "Acier"
-        ], placeholder=txt_choix, key="f_mat_vitre")
-        st.selectbox("État des menuiseries", ["Excellent", "Bon état", "Moyen", "Vétuste"], key="f_etat_m")
-    with t2:
-        st.selectbox("Énergie Chauffage", ["Gaz", "Électricité", "Fuel", "PAC", "Bois", "Géothermie"], key="f_chauff")
-        st.multiselect("Distribution", ["Radiateurs", "Plancher chauffant", "Clim réversible", "Poêle"], placeholder=txt_choix, key="f_distri")
-        st.selectbox("Production Eau Chaude", ["Cumulus Élec", "Chaudière", "Solaire", "Thermodynamique"], key="f_ecs")
+    st.subheader("📏 3. Tableau des Surfaces")
+    for i in range(st.session_state.rows):
+        sc1, sc2, sc3 = st.columns([2, 1, 2])
+        with sc1: st.text_input(f"Pièce {i+1}", key=f"p{i}")
+        with sc2: st.number_input("m²", key=f"m{i}", step=0.01, format="%.2f")
+        with sc3: st.text_input("Observations", key=f"r{i}")
+    st.button("➕ Ajouter une pièce", on_click=lambda: st.session_state.update({"rows": st.session_state.rows + 1}))
 
-# --- 2. EXTÉRIEURS & RISQUES ---
-elif menu == "2. Extérieurs & Risques ERP":
-    e1, e2 = st.columns(2)
-    with e1:
-        st.subheader("🏡 Aménagements")
-        st.multiselect("Éléments Terrain", ["Clôture", "Portail motorisé", "Arrosage", "Puits", "Cuisine d'été"], placeholder=txt_choix, key="f_ext_e")
-        st.selectbox("Piscine", ["Aucune", "Enterrée", "Hors-sol"], key="f_pisc")
-    with e2:
-        st.subheader("📦 Annexes")
-        st.multiselect("Dépendances", ["Garage", "Cave", "Carport", "Abri jardin", "Terrasse", "Balcon"], placeholder=txt_choix, key="f_annexes")
+# --- 6. SECTION 2 : RISQUES ERP ---
+elif menu == "2. Risques ERP":
+    st.subheader("🚫 État des Risques (ERP France)")
+    r1, r2 = st.columns(2)
+    with r1:
+        st.selectbox("Zone de Sismicité", ["1 (Très faible)", "2", "3", "4", "5 (Forte)"], key="f_erp_s")
+        st.selectbox("Aléa Retrait-Gonflement des Argiles", ["Nul", "Faible", "Moyen", "Fort"], key="f_erp_a")
+    with r2:
+        st.checkbox("Zone Inondable (PPRI)", key="f_erp_i")
+        st.checkbox("Risque Radon (Niveau 3)", key="f_erp_radon")
+        st.checkbox("Plan d'Exposition au Bruit (PEB)", key="f_erp_peb")
 
-    st.markdown("---")
-    st.subheader("🚫 État des Risques (ERP)")
-    st.selectbox("Zone Sismique", ["1", "2", "3", "4", "5"], key="f_erp_s")
-    st.selectbox("Aléa Argiles", ["Nul", "Faible", "Moyen", "Fort"], key="f_erp_a")
-    st.checkbox("Zone Inondable", key="f_erp_i")
+# --- 7. SECTION 3 : PHOTOS ---
+elif menu == "3. Photos & Docs":
+    st.subheader("📸 Reportage Photo")
+    st.file_uploader("Prendre une photo (iPad) ou Importer", accept_multiple_files=True, type=['jpg', 'jpeg', 'png'])
+    st.info("Les photos seront compressées pour le rapport final.")
 
-# --- 3. PATHOLOGIES ---
-elif menu == "3. Diagnostic Pathologies":
-    st.subheader("⚠️ Désordres")
-    if st.button("➕ Ajouter un désordre"):
-        st.session_state.pathos.append({"loc": "", "type": "Fissure", "grav": "Faible", "obs": ""})
+# --- 8. SECTION 4 : PATHOLOGIES & FACTURE ---
+elif menu == "4. Pathologies & Facture":
+    st.subheader("⚠️ Désordres & Pathologies")
+    st.text_area("Observations détaillées de l'expert", key="f_pathos", height=150)
     
-    for idx, p in enumerate(st.session_state.pathos):
-        with st.expander(f"Désordre n°{idx+1}", expanded=True):
-            st.session_state.pathos[idx]["loc"] = st.text_input("Localisation", value=p["loc"], key=f"l_{idx}")
-            st.session_state.pathos[idx]["type"] = st.selectbox("Nature", ["Fissure structurelle", "Fissure de retrait", "Humidité", "Infiltration", "Termites"], key=f"t_{idx}")
-            st.session_state.pathos[idx]["grav"] = st.select_slider("Gravité", options=["Faible", "Moyenne", "Critique"], key=f"g_{idx}")
-            st.session_state.pathos[idx]["obs"] = st.text_area("Observations", value=p["obs"], key=f"o_{idx}")
+    st.markdown("---")
+    st.subheader("💰 Synthèse Financière (TTC)")
+    f1, f2 = st.columns(2)
+    with f1:
+        hono = st.number_input("Montant Honoraires Expertise TTC (€)", value=0.0)
+    with f2:
+        depl = st.number_input("Frais de déplacement TTC (€)", value=0.0)
+    
+    total_final = hono + depl
+    st.metric("TOTAL GÉNÉRAL À PAYER TTC", f"{total_final:.2f} €")
+    st.session_state["total_ttc"] = total_final
 
-# --- 4. SURFACES ---
-elif menu == "4. Tableau des Surfaces":
-    st.subheader("📏 Relevé m²")
-    if st.button("➕ Ajouter une pièce"):
-        st.session_state.pieces.append({"nom": "", "surface": 0.0, "note": ""})
-    for i, piece in enumerate(st.session_state.pieces):
-        c1, c2, c3 = st.columns([2, 1, 2])
-        st.session_state.pieces[i]["nom"] = c1.text_input("Nom de la pièce", value=piece["nom"], key=f"pnom_{i}")
-        st.session_state.pieces[i]["surface"] = c2.number_input("m²", value=piece["surface"], key=f"psurf_{i}")
-        st.session_state.pieces[i]["note"] = c3.text_input("Note", value=piece["note"], key=f"pnote_{i}")
-
-# --- 5. PHOTOS ---
-elif menu == "5. Photos & Signature":
-    st.subheader("📸 Reportage")
-    st.file_uploader("Prendre des photos", accept_multiple_files=True, type=['jpg', 'png'])
-    st.text_input("Nom du signataire", key="f_sign")
-
-# --- 6. FACTURATION ---
-elif menu == "6. Facturation TTC":
-    st.subheader("💰 Honoraires TTC")
-    hono = st.number_input("Expertise TTC (€)", value=0.0, key="f_h_ttc")
-    km = st.number_input("Nombre km (A/R)", value=0, key="f_km_ttc")
-    t_km = st.number_input("Tarif TTC (€/km)", value=0.60)
-    total = hono + (km * t_km)
-    st.metric("TOTAL TTC", f"{total:.2f} €")
-    st.session_state["total_f"] = total
-
-# --- GÉNÉRATION DU PDF FINAL ---
+# --- 9. LE BOUTON DE GÉNÉRATION PDF ---
 st.markdown("---")
 if st.button("📄 ÉDITER LE COMPTE-RENDU DE VISITE"):
     try:
         pdf = PDF()
         pdf.add_page()
         
-        # Section 1
-        pdf.section_header("1. IDENTIFICATION ET TECHNIQUE")
-        pdf.add_data("Client", st.session_state.get('f_donneur', 'Non renseigné'))
-        pdf.add_data("Adresse", st.session_state.get('f_addr', 'Non renseignée'))
+        # 1. Dossier Technique
+        pdf.section_header("1. IDENTIFICATION DU DOSSIER")
+        pdf.add_data("Client", st.session_state.get('f_client', ''))
+        pdf.add_data("Adresse", st.session_state.get('f_adresse', ''))
+        pdf.add_data("Ville", st.session_state.get('f_ville', ''))
         
-        # Menuiseries avec gestion de liste vide
-        mat_list = st.session_state.get('f_mat_vitre', [])
-        pdf.add_data("Menuiseries/Vitrages", ", ".join(mat_list) if mat_list else "Non renseigné")
-        pdf.add_data("Chauffage", st.session_state.get('f_chauff', 'Non renseigné'))
+        pdf.section_header("2. CARACTERISTIQUES TECHNIQUES")
+        vitres = st.session_state.get('f_vitre', [])
+        pdf.add_data("Vitrages & Materiaux", ", ".join(vitres) if vitres else "Non renseigné")
+        pdf.add_data("Energie Chauffage", st.session_state.get('f_chauff', ''))
+        pdf.add_data("Distribution", st.session_state.get('f_distri', ''))
         
-        # Section 2
-        pdf.section_header("2. PATHOLOGIES")
-        if not st.session_state.pathos:
-            pdf.write(5, "Aucun désordre signalé.\n".encode('latin-1'))
-        else:
-            for p in st.session_state.pathos:
-                pdf.add_data(f"Désordre ({p['loc']})", f"{p['type']} - Gravité: {p['grav']}")
+        # 2. ERP
+        pdf.section_header("3. RISQUES (ERP)")
+        pdf.add_data("Sismicite", st.session_state.get('f_erp_s', ''))
+        pdf.add_data("Aléa Argiles", st.session_state.get('f_erp_a', ''))
 
-        # Section 3
-        pdf.section_header("3. SYNTHESE FINANCIERE")
-        pdf.add_data("TOTAL PRESTATION", f"{st.session_state.get('total_f', 0):.2f} Euros TTC")
+        # 3. Surfaces
+        pdf.section_header("4. TABLEAU DES SURFACES")
+        for i in range(st.session_state.rows):
+            p_nom = st.session_state.get(f"p{i}")
+            p_val = st.session_state.get(f"m{i}")
+            if p_nom:
+                pdf.add_data(p_nom, f"{p_val} m2")
 
-        # Sortie sécurisée
-        res = pdf.output(dest='S').encode('latin-1', 'replace')
-        st.download_button("📥 TÉLÉCHARGER LE COMPTE-RENDU (PDF)", res, "Compte_Rendu_Visite.pdf", "application/pdf")
-        st.success("✅ Document prêt au téléchargement.")
+        # 4. Facture
+        pdf.section_header("5. SYNTHESE FINANCIERE")
+        pdf.add_data("MONTANT TOTAL", f"{st.session_state.get('total_ttc', 0):.2f} Euros TTC")
+
+        # Génération du flux binaire pour le téléchargement
+        pdf_output = pdf.output(dest='S').encode('latin-1', 'replace')
+        
+        # Création du bouton de téléchargement final
+        st.download_button(
+            label="📥 TÉLÉCHARGER LE COMPTE-RENDU (PDF)",
+            data=pdf_output,
+            file_name="Compte_Rendu_Expertise.pdf",
+            mime="application/pdf"
+        )
+        st.success("Le document a été préparé. Cliquez sur le bouton bleu ci-dessus pour l'enregistrer.")
+    
     except Exception as e:
         st.error(f"Une erreur est survenue lors de la création du PDF : {e}")
