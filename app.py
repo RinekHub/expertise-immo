@@ -22,29 +22,31 @@ def process_image(uploaded_file):
     image.save(img_byte_arr, format='JPEG', quality=70)
     return img_byte_arr.getvalue()
 
-# --- 2. CLASSE PDF (Logo, Titres grisés, Protection accents) ---
+# --- CLASSE PDF MODIFIÉE (SÉCURISÉE POUR LE LOGO) ---
 class PDF(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
-            self.image("logo.png", 10, 8, 33)
+            try:
+                # On utilise Pillow pour ouvrir et convertir le logo 
+                # Cela retire l'entrelacement qui fait planter FPDF
+                img = Image.open("logo.png")
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                
+                # On sauve temporairement en mémoire pour le PDF
+                img_temp = io.BytesIO()
+                img.save(img_temp, format='JPEG')
+                img_temp.seek(0)
+                
+                self.image(img_temp, 10, 8, 33, type='JPEG')
+            except Exception:
+                # Si vraiment le logo pose problème, on écrit le nom du Cabinet
+                self.set_font('Arial', 'B', 12)
+                self.cell(0, 10, 'FD EXPERTISE', 0, 0, 'L')
+                
         self.set_font('Arial', 'B', 14)
         self.cell(0, 10, 'COMPTE-RENDU DE VISITE TECHNIQUE', 0, 1, 'C')
         self.ln(10)
-
-    def section_header(self, num, label):
-        self.set_font('Arial', 'B', 11)
-        self.set_fill_color(230, 230, 230) # Grisage des titres
-        txt = f"{num}. {label}".encode('latin-1', 'replace').decode('latin-1')
-        self.cell(0, 8, f" {txt}", 0, 1, 'L', 1)
-        self.ln(2)
-
-    def add_data(self, label, value):
-        self.set_font('Arial', 'B', 9)
-        lbl = f"{label} : ".encode('latin-1', 'replace').decode('latin-1')
-        self.write(5, lbl)
-        self.set_font('Arial', '', 9)
-        val = str(value).encode('latin-1', 'replace').decode('latin-1')
-        self.write(5, f"{val}\n")
 
 # --- 3. INITIALISATION ---
 if 'pathos' not in st.session_state: st.session_state.pathos = []
