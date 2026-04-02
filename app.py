@@ -102,11 +102,26 @@ st.markdown("---")
 st.header("🌳 3. Section Extérieurs & Risques")
 e1, e2 = st.columns(2)
 with e1:
+    st.subheader("🌳 Aménagements & Annexes")
+    
+    # Éléments communs (Appartement et Maison)
+    st.multiselect("Annexes du bien", 
+                   ["Terrasse", "Balcon", "Véranda", "Loggia", "Cave", "Parking / Box", "Cellier"], 
+                   placeholder="Choisissez...", 
+                   key="a_annexes")
+    
+    # Options spécifiques si c'est une Maison
     if type_bien == "Maison":
-        st.text_input("Terrain (Clôture, Puits, Haies)", key="t_terrain")
-        st.selectbox("Piscine", ["Aucune", "Enterrée", "Hors-sol"], key="t_piscine")
-        st.multiselect("Sécurité Piscine", ["Alarme", "Volet", "Barrière", "Couverture"], placeholder="Choisissez...", key="t_pisc_secu")
-    st.selectbox("État d'entretien général", ["Excellent", "Bon", "Moyen", "Négligé"], key="i_entretien")
+        st.text_input("Terrain (Clôture, Puits, Haies, Portail)", key="t_terrain")
+        st.selectbox("Piscine", ["Aucune", "Enterrée", "Hors-sol"], index=None, placeholder="Choisissez...", key="t_piscine")
+        st.multiselect("Équipements Extérieurs", ["Arrosage auto", "Éclairage", "Cuisine d'été", "Abri jardin"], placeholder="Choisissez...", key="t_equip")
+    
+    # État général (Pour tous)
+    st.selectbox("État d'entretien général", 
+                 ["Excellent", "Bon", "Moyen", "Négligé"], 
+                 index=None, 
+                 placeholder="Choisissez...", 
+                 key="i_entretien")
 with e2:
     st.subheader("🚫 Risques (ERP)")
     st.selectbox("Zone Sismique", ["1", "2", "3", "4", "5"], key="erp_sis")
@@ -123,10 +138,35 @@ if st.button("➕ Ajouter un désordre"):
 
 for idx, p in enumerate(st.session_state.pathos):
     with st.expander(f"⚠️ Désordre n°{idx+1}", expanded=True):
-        st.session_state.pathos[idx]["loc"] = st.text_input("Localisation", key=f"ploc_{idx}", value=p["loc"])
-        st.session_state.pathos[idx]["grav"] = st.select_slider("Gravité", options=["🟢 Faible", "🟡 Modéré", "🔴 Grave"], key=f"pgrav_{idx}", value=p["grav"])
-        st.session_state.pathos[idx]["obs"] = st.text_area("Observations (Dictée 🎙️)", key=f"pobs_{idx}", value=p["obs"])
-        if st.button(f"🗑️ Supprimer n°{idx+1}", key=f"del_{idx}"):
+        col_p1, col_p2 = st.columns(2)
+        
+        with col_p1:
+            # 1. Localisation (ex: Façade Nord, Salon...)
+            st.session_state.pathos[idx]["loc"] = st.text_input("Localisation du désordre", 
+                                                               key=f"ploc_{idx}", 
+                                                               value=p["loc"])
+            
+            # 2. LA LISTE DES DÉSORDRES (Le menu qui manquait)
+            st.session_state.pathos[idx]["type"] = st.selectbox("Nature du désordre", 
+                                                               ["Fissure structurelle", "Fissure esthétique", "Humidité / Salpêtre", "Infiltration toiture", "Défaut d'étanchéité", "Remontée capillaire", "Affaissement", "Autre"], 
+                                                               index=None, 
+                                                               placeholder="Choisissez...", 
+                                                               key=f"ptyp_{idx}")
+        
+        with col_p2:
+            # 3. La Gravité (Slider visuel)
+            st.session_state.pathos[idx]["grav"] = st.select_slider("Degré de gravité", 
+                                                                   options=["🟢 Faible", "🟡 Modéré", "🔴 Grave"], 
+                                                                   key=f"pgrav_{idx}", 
+                                                                   value=p["grav"])
+        
+        # 4. Observations avec dictée vocale
+        st.session_state.pathos[idx]["obs"] = st.text_area("Observations détaillées (🎙️ Dictée possible)", 
+                                                          key=f"pobs_{idx}", 
+                                                          value=p["obs"])
+        
+        # Bouton pour supprimer si erreur
+        if st.button(f"🗑️ Supprimer ce désordre", key=f"del_{idx}"):
             st.session_state.pathos.pop(idx)
             st.rerun()
 
