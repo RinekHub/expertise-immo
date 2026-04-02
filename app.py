@@ -218,15 +218,62 @@ if st.button("📄 GÉNÉRER LE RAPPORT FINAL"):
     try:
         pdf = PDF()
         pdf.add_page()
-        pdf.section_header("Identification")
-        pdf.add_data("Client", st.session_state.d_client)
-        pdf.add_data("Adresse", st.session_state.d_adr)
-        pdf.section_header("Surfaces")
+
+        # --- SECTION 1 : IDENTIFICATION ---
+        pdf.section_header("1. Identification & Technique")
+        pdf.add_data("Donneur d'ordre", st.session_state.get('d_client'))
+        pdf.add_data("Propriétaire", st.session_state.get('d_prop'))
+        pdf.add_data("Adresse", st.session_state.get('d_adr'))
+        pdf.add_data("Année (Const./Rénov.)", st.session_state.get('i_annee'))
+        pdf.add_data("Situation Locative", st.session_state.get('i_loc'))
+        if type_bien == "Appartement":
+            pdf.add_data("Syndic", st.session_state.get('i_syndic'))
+        
+        # --- SECTION 2 : MENUISERIES & ENERGIES ---
+        pdf.section_header("2. Menuiseries & Energies")
+        pdf.add_data("Matériaux", ", ".join(st.session_state.get('m_mat', [])))
+        pdf.add_data("Vitrage", st.session_state.get('m_vitre'))
+        pdf.add_data("Chauffage/Energie", st.session_state.get('e_source'))
+        pdf.add_data("Eau Chaude", st.session_state.get('e_eau'))
+
+        # --- SECTION 3 : EXTERIEURS & RISQUES ---
+        pdf.section_header("3. Exterieurs & Risques")
+        if type_bien == "Maison":
+            pdf.add_data("Terrain/Annexes", st.session_state.get('t_terrain'))
+            pdf.add_data("Piscine", st.session_state.get('t_piscine'))
+        pdf.add_data("Entretien Général", st.session_state.get('i_entretien'))
+        pdf.add_data("Zone Sismique", st.session_state.get('erp_sis'))
+        pdf.add_data("Aléa Argiles", st.session_state.get('erp_arg'))
+
+        # --- SECTION 4 : PATHOLOGIES ---
+        pdf.section_header("4. Liste des Pathologies constatées")
+        if not st.session_state.pathos:
+            pdf.add_data("Désordres", "Aucun désordre signalé")
+        for idx, p in enumerate(st.session_state.pathos):
+            desc = f"[{p.get('grav')}] {p.get('type')} à {p.get('loc')} : {p.get('obs')}"
+            pdf.add_data(f"Désordre n°{idx+1}", desc)
+
+        # --- SECTION 5 : TABLEAU DES SURFACES ---
+        pdf.section_header("5. Tableau des Surfaces")
         for i in range(st.session_state.rows):
-            if st.session_state.get(f"p{i}"):
-                pdf.add_data(st.session_state[f"p{i}"], f"{st.session_state[f'm{i}']} m2")
-        pdf.section_header("Synthèse Financière")
+            p_name = st.session_state.get(f"p{i}")
+            if p_name: # On n'affiche que les lignes remplies
+                m2 = st.session_state.get(f"m{i}", 0)
+                obs = st.session_state.get(f"r{i}", "")
+                pdf.add_data(p_name, f"{m2} m2 ({obs})")
+
+        # --- SECTION 6 : SYNTHÈSE & SIGNATURE ---
+        pdf.section_header("6. Synthèse & Signature")
+        pdf.add_data("Commentaires", st.session_state.get('comm_libres'))
+        pdf.add_data("Signataire", st.session_state.get('signature_nom'))
+        
+        # --- SECTION 7 : FACTURATION ---
+        pdf.section_header("7. Facturation")
         pdf.add_data("Total TTC", f"{total:.2f} Euros")
+
+        # Sortie du fichier
         buf = pdf.output(dest='S').encode('latin-1', 'replace')
-        st.download_button("📥 TÉLÉCHARGER LE PDF", buf, "Rapport_FD.pdf", "application/pdf")
-    except Exception as e: st.error(f"Erreur : {e}")
+        st.download_button("📥 TÉLÉCHARGER LE PDF COMPLET", buf, "Rapport_Expertise_FD.pdf", "application/pdf")
+        
+    except Exception as e:
+        st.error(f"Erreur lors de la capture des données : {e}")
