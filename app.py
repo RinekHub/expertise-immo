@@ -7,11 +7,10 @@ import io
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Cabinet FD Expertise", layout="wide")
 
-# Initialisation
 if 'pathos' not in st.session_state: st.session_state.pathos = []
 if 'rows' not in st.session_state: st.session_state.rows = 5
 
-# --- 2. CLASSE PDF (POLICE & LOGO D'ORIGINE) ---
+# --- 2. CLASSE PDF ---
 class PDF(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
@@ -43,7 +42,7 @@ class PDF(FPDF):
         val = str(value if value else "---").encode('latin-1', 'replace').decode('latin-1')
         self.write(5, f"{val}\n")
 
-# --- 3. BARRE LATÉRALE (LOGO FD EN PREMIER) ---
+# --- 3. BARRE LATÉRALE ---
 with st.sidebar:
     if os.path.exists("logo.png"):
         st.image("logo.png", width=200)
@@ -63,34 +62,19 @@ with c1:
     st.subheader("👤 Identification")
     st.text_input("Donneur d'ordre", key="d_client")
     st.text_input("Propriétaire", key="d_prop")
-    
-    # 1. Saisie de l'adresse
     adr = st.text_input("Adresse du bien", key="d_adr")
-    
-    # 2. GÉNÉRATION DU LIEN GOOGLE MAPS (Le lien qui manquait)
     if adr:
-        # On nettoie l'adresse pour l'URL
         lien_maps = f"https://www.google.com/maps/search/?api=1&query={adr.replace(' ', '+')}"
         st.markdown(f"📍 [Ouvrir dans Google Maps / Street View]({lien_maps})")
-    else:
-        st.caption("Saisissez une adresse pour générer le lien Maps")
 with c2:
-    # 1. Le titre qui change selon le bien (Maison ou Immeuble)
     titre_bloc = "🏠 Bloc Maison" if type_bien == "Maison" else "🏢 Bloc Immeuble"
     st.subheader(titre_bloc)
-    
-    # 2. Le Facteur Année (ton critère important)
     st.text_input("Facteur Année", key="i_annee")
-    
-    # 3. La Situation Locative en Français ("Choisissez...")
     st.selectbox("Situation Locative", ["Libre", "Occupé (Proprio)", "Loué", "Vides"], index=None, placeholder="Choisissez...", key="i_loc")
-    
-    # 4. La logique conditionnelle (Syndic pour Appart / Copro pour Maison)
     if type_bien == "Appartement":
         st.text_input("Syndic (Nom / Contact)", key="i_syndic")
         st.checkbox("Ascenseur", key="i_asc")
     else:
-        # Pour le formulaire Maison, on demande si c'est en copropriété ou non
         st.radio("Régime de propriété", ["Non (Pleine Propriété)", "Oui (Maison en Copropriété)"], key="i_copro_m")
 
 st.markdown("---")
@@ -100,38 +84,24 @@ st.header("🏠 2. Menuiseries & Énergies")
 m1, m2 = st.columns(2)
 with m1:
     st.multiselect("Matériaux", ["PVC", "Alu", "Bois", "Mixte"], placeholder="Choisissez...", key="m_mat")
-    st.selectbox("Type de vitrage", ["Simple vitrage", "Double vitrage", "Double vitrage FE", "Triple vitrage"], key="m_vitre")
-    st.selectbox("État des menuiseries", ["Bon", "Moyen", "Vétuste"], key="m_etat")
+    st.selectbox("Type de vitrage", ["Simple vitrage", "Double vitrage", "Double vitrage FE", "Triple vitrage"], index=None, placeholder="Choisissez...", key="m_vitre")
+    st.selectbox("État des menuiseries", ["Bon", "Moyen", "Vétuste"], index=None, placeholder="Choisissez...", key="m_etat")
 with m2:
-    st.selectbox("Source d'énergie", ["Électricité", "Gaz Naturel", "PAC", "Fuel", "Chaudière électrique", "Bois"], key="e_source")
-    st.selectbox("Production Eau Chaude", ["Cumulus électrique", "Ballon Thermo", "Chaudière mixte", "Chaudière Fuel"], key="e_eau")
+    st.selectbox("Source d'énergie", ["Électricité", "Gaz Naturel", "PAC", "Fuel", "Chaudière électrique", "Bois"], index=None, placeholder="Choisissez...", key="e_source")
+    st.selectbox("Production Eau Chaude", ["Cumulus électrique", "Ballon Thermo", "Chaudière mixte", "Chaudière Fuel"], index=None, placeholder="Choisissez...", key="e_eau")
 
 st.markdown("---")
 
-# --- SECTION 3 : EXTÉRIEURS & RISQUES (ERP) ---
+# --- SECTION 3 : EXTÉRIEURS & RISQUES ---
 st.header("🌳 3. Section Extérieurs & Risques")
 e1, e2 = st.columns(2)
 with e1:
     st.subheader("🌳 Aménagements & Annexes")
-    
-    # Éléments communs (Appartement et Maison)
-    st.multiselect("Annexes du bien", 
-                   ["Terrasse", "Balcon", "Véranda", "Loggia", "Cave", "Parking / Box", "Cellier"], 
-                   placeholder="Choisissez...", 
-                   key="a_annexes")
-    
-    # Options spécifiques si c'est une Maison
+    st.multiselect("Annexes du bien", ["Terrasse", "Balcon", "Véranda", "Loggia", "Cave", "Parking / Box", "Cellier"], placeholder="Choisissez...", key="a_annexes")
     if type_bien == "Maison":
         st.text_input("Terrain (Clôture, Puits, Haies, Portail)", key="t_terrain")
         st.selectbox("Piscine", ["Aucune", "Enterrée", "Hors-sol"], index=None, placeholder="Choisissez...", key="t_piscine")
-        st.multiselect("Équipements Extérieurs", ["Arrosage auto", "Éclairage", "Cuisine d'été", "Abri jardin"], placeholder="Choisissez...", key="t_equip")
-    
-    # État général (Pour tous)
-    st.selectbox("État d'entretien général", 
-                 ["Excellent", "Bon", "Moyen", "Négligé"], 
-                 index=None, 
-                 placeholder="Choisissez...", 
-                 key="i_entretien")
+    st.selectbox("État d'entretien général", ["Excellent", "Bon", "Moyen", "Négligé"], index=None, placeholder="Choisissez...", key="i_entretien")
 with e2:
     st.subheader("🚫 Risques (ERP)")
     st.selectbox("Zone Sismique", ["1", "2", "3", "4", "5"], key="erp_sis")
@@ -143,46 +113,25 @@ st.markdown("---")
 # --- SECTION 4 : PATHOLOGIES ---
 st.header("⚠️ 4. Section Pathologies")
 if st.button("➕ Ajouter un désordre"):
-    st.session_state.pathos.append({"loc": "", "type": "Fissure", "grav": "🟢 Faible", "obs": ""})
+    st.session_state.pathos.append({"loc": "", "type": None, "grav": "🟢 Faible", "obs": ""})
     st.rerun()
 
 for idx, p in enumerate(st.session_state.pathos):
     with st.expander(f"⚠️ Désordre n°{idx+1}", expanded=True):
         col_p1, col_p2 = st.columns(2)
-        
         with col_p1:
-            # 1. Localisation (ex: Façade Nord, Salon...)
-            st.session_state.pathos[idx]["loc"] = st.text_input("Localisation du désordre", 
-                                                               key=f"ploc_{idx}", 
-                                                               value=p["loc"])
-            
-            # 2. LA LISTE DES DÉSORDRES (Le menu qui manquait)
-            st.session_state.pathos[idx]["type"] = st.selectbox("Nature du désordre", 
-                                                               ["Fissure structurelle", "Fissure esthétique", "Humidité / Salpêtre", "Infiltration toiture", "Défaut d'étanchéité", "Remontée capillaire", "Affaissement", "Autre"], 
-                                                               index=None, 
-                                                               placeholder="Choisissez...", 
-                                                               key=f"ptyp_{idx}")
-        
+            st.session_state.pathos[idx]["loc"] = st.text_input("Localisation", key=f"ploc_{idx}", value=p["loc"])
+            st.session_state.pathos[idx]["type"] = st.selectbox("Nature", ["Fissure structurelle", "Fissure esthétique", "Humidité / Salpêtre", "Infiltration toiture", "Autre"], index=None, placeholder="Choisissez...", key=f"ptyp_{idx}")
         with col_p2:
-            # 3. La Gravité (Slider visuel)
-            st.session_state.pathos[idx]["grav"] = st.select_slider("Degré de gravité", 
-                                                                   options=["🟢 Faible", "🟡 Modéré", "🔴 Grave"], 
-                                                                   key=f"pgrav_{idx}", 
-                                                                   value=p["grav"])
-        
-        # 4. Observations avec dictée vocale
-        st.session_state.pathos[idx]["obs"] = st.text_area("Observations détaillées (🎙️ Dictée possible)", 
-                                                          key=f"pobs_{idx}", 
-                                                          value=p["obs"])
-        
-        # Bouton pour supprimer si erreur
-        if st.button(f"🗑️ Supprimer ce désordre", key=f"del_{idx}"):
+            st.session_state.pathos[idx]["grav"] = st.select_slider("Gravité", options=["🟢 Faible", "🟡 Modéré", "🔴 Grave"], key=f"pgrav_{idx}", value=p["grav"])
+        st.session_state.pathos[idx]["obs"] = st.text_area("Observations (🎙️)", key=f"pobs_{idx}", value=p["obs"])
+        if st.button(f"🗑️ Supprimer n°{idx+1}", key=f"del_{idx}"):
             st.session_state.pathos.pop(idx)
             st.rerun()
 
 st.markdown("---")
 
-# --- SECTION 5 : SURFACES (BAS DE PAGE) ---
+# --- SECTION 5 : SURFACES ---
 st.header("📏 5. Tableau des Surfaces")
 for i in range(st.session_state.rows):
     sc1, sc2, sc3 = st.columns([2, 1, 2])
@@ -198,8 +147,8 @@ st.markdown("---")
 # --- SECTION 6 : PHOTOS & SIGNATURE ---
 st.header("📸 6. Photos & Signature")
 st.file_uploader("📸 Ajouter des photos", accept_multiple_files=True, key="photos_fin")
-st.text_area("Note de synthèse / Commentaires libres", key="comm_libres")
-st.text_input("🖋️ Signature (Nom du signataire)", key="signature_nom")
+st.text_area("Note de synthèse", key="comm_libres")
+st.text_input("🖋️ Signature (Nom)", key="signature_nom")
 
 st.markdown("---")
 
@@ -212,68 +161,51 @@ with f3: t_km = st.number_input("Tarif KM", value=0.60, key="tk_val")
 total = h_ttc + (dist * t_km)
 st.metric("TOTAL GÉNÉRAL TTC", f"{total:.2f} €")
 
-# --- BOUTON PDF FINAL ---
+# --- 🚀 BOUTON DE GÉNÉRATION DU RAPPORT FINAL ---
 st.markdown("---")
 if st.button("📄 GÉNÉRER LE RAPPORT FINAL"):
     try:
         pdf = PDF()
         pdf.add_page()
-
-        # --- SECTION 1 : IDENTIFICATION ---
-        pdf.section_header("1. Identification & Technique")
-        pdf.add_data("Donneur d'ordre", st.session_state.get('d_client'))
-        pdf.add_data("Propriétaire", st.session_state.get('d_prop'))
-        pdf.add_data("Adresse", st.session_state.get('d_adr'))
-        pdf.add_data("Année (Const./Rénov.)", st.session_state.get('i_annee'))
-        pdf.add_data("Situation Locative", st.session_state.get('i_loc'))
-        if type_bien == "Appartement":
-            pdf.add_data("Syndic", st.session_state.get('i_syndic'))
         
-        # --- SECTION 2 : MENUISERIES & ENERGIES ---
+        pdf.section_header("1. Identification & Technique")
+        pdf.add_data("Client", st.session_state.get('d_client'))
+        pdf.add_data("Adresse", st.session_state.get('d_adr'))
+        pdf.add_data("Facteur Annee", st.session_state.get('i_annee'))
+        pdf.add_data("Situation Locative", st.session_state.get('i_loc'))
+        
         pdf.section_header("2. Menuiseries & Energies")
-        pdf.add_data("Matériaux", ", ".join(st.session_state.get('m_mat', [])))
+        pdf.add_data("Materiaux", ", ".join(st.session_state.get('m_mat', [])))
         pdf.add_data("Vitrage", st.session_state.get('m_vitre'))
-        pdf.add_data("Chauffage/Energie", st.session_state.get('e_source'))
-        pdf.add_data("Eau Chaude", st.session_state.get('e_eau'))
-
-        # --- SECTION 3 : EXTERIEURS & RISQUES ---
+        pdf.add_data("Source Energie", st.session_state.get('e_source'))
+        
         pdf.section_header("3. Exterieurs & Risques")
-        if type_bien == "Maison":
-            pdf.add_data("Terrain/Annexes", st.session_state.get('t_terrain'))
-            pdf.add_data("Piscine", st.session_state.get('t_piscine'))
-        pdf.add_data("Entretien Général", st.session_state.get('i_entretien'))
-        pdf.add_data("Zone Sismique", st.session_state.get('erp_sis'))
-        pdf.add_data("Aléa Argiles", st.session_state.get('erp_arg'))
-
-        # --- SECTION 4 : PATHOLOGIES ---
-        pdf.section_header("4. Liste des Pathologies constatées")
+        pdf.add_data("Annexes", ", ".join(st.session_state.get('a_annexes', [])))
+        pdf.add_data("Alea Argiles", st.session_state.get('erp_arg'))
+        
+        pdf.section_header("4. Pathologies constatees")
         if not st.session_state.pathos:
-            pdf.add_data("Désordres", "Aucun désordre signalé")
-        for idx, p in enumerate(st.session_state.pathos):
-            desc = f"[{p.get('grav')}] {p.get('type')} à {p.get('loc')} : {p.get('obs')}"
-            pdf.add_data(f"Désordre n°{idx+1}", desc)
+            pdf.add_data("Desordres", "Aucun desordre signale")
+        else:
+            for idx in range(len(st.session_state.pathos)):
+                nature = st.session_state.get(f'ptyp_{idx}')
+                lieu = st.session_state.get(f'ploc_{idx}')
+                gravite = st.session_state.get(f'pgrav_{idx}')
+                obs_pat = st.session_state.get(f'pobs_{idx}')
+                pdf.add_data(f"Desordre {idx+1}", f"{nature} a {lieu} ({gravite})")
+                pdf.add_data("Observations", obs_pat)
 
-        # --- SECTION 5 : TABLEAU DES SURFACES ---
         pdf.section_header("5. Tableau des Surfaces")
         for i in range(st.session_state.rows):
-            p_name = st.session_state.get(f"p{i}")
-            if p_name: # On n'affiche que les lignes remplies
-                m2 = st.session_state.get(f"m{i}", 0)
-                obs = st.session_state.get(f"r{i}", "")
-                pdf.add_data(p_name, f"{m2} m2 ({obs})")
+            nom_p = st.session_state.get(f"p{i}")
+            if nom_p:
+                pdf.add_data(nom_p, f"{st.session_state.get(f'm{i}')} m2 - {st.session_state.get(f'r{i}')}")
 
-        # --- SECTION 6 : SYNTHÈSE & SIGNATURE ---
-        pdf.section_header("6. Synthèse & Signature")
-        pdf.add_data("Commentaires", st.session_state.get('comm_libres'))
-        pdf.add_data("Signataire", st.session_state.get('signature_nom'))
-        
-        # --- SECTION 7 : FACTURATION ---
-        pdf.section_header("7. Facturation")
-        pdf.add_data("Total TTC", f"{total:.2f} Euros")
+        pdf.section_header("6. Synthese & Facturation")
+        pdf.add_data("Expert", st.session_state.get('signature_nom'))
+        pdf.add_data("TOTAL TTC", f"{total:.2f} Euros")
 
-        # Sortie du fichier
         buf = pdf.output(dest='S').encode('latin-1', 'replace')
-        st.download_button("📥 TÉLÉCHARGER LE PDF COMPLET", buf, "Rapport_Expertise_FD.pdf", "application/pdf")
-        
+        st.download_button("📥 TÉLÉCHARGER LE RAPPORT PDF", buf, "Rapport_FD.pdf", "application/pdf")
     except Exception as e:
-        st.error(f"Erreur lors de la capture des données : {e}")
+        st.error(f"Erreur : {e}")
