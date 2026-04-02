@@ -10,25 +10,42 @@ st.set_page_config(page_title="Cabinet FD Expertise", layout="wide")
 if 'pathos' not in st.session_state: st.session_state.pathos = []
 if 'rows' not in st.session_state: st.session_state.rows = 5
 
-# --- 2. CLASSE PDF AVEC FIX LOGO (INTERLACING SUPPORT) ---
+# --- 2. FONCTION DE CHARGEMENT LOGO SÉCURISÉE ---
+def charger_logo():
+    """Charge le logo depuis le disque et le convertit pour FPDF"""
+    logo_path = "logo.png"
+    if os.path.exists(logo_path):
+        try:
+            img = Image.open(logo_path)
+            # FIX : Conversion RGBA/Palette et Interlacing vers RGB (JPEG compatible)
+            if img.mode in ("RGBA", "P") or img.info.get("interlace"):
+                img = img.convert("RGB")
+            
+            # Buffer mémoire pour éviter les fichiers temporaires
+            img_buffer = io.BytesIO()
+            img.save(img_buffer, format='JPEG')
+            img_buffer.seek(0)
+            return img_buffer
+        except Exception as e:
+            st.warning(f"⚠️ Erreur technique lors du chargement du logo : {e}")
+            return None
+    else:
+        # L'ERREUR VIENT D'ICI : Le fichier n'est pas sur le serveur Streamlit
+        st.error("❌ Fichier 'logo.png' introuvable dans le dossier du projet sur GitHub.")
+        st.info("💡 Pour régler ça : Ajoute ton fichier 'logo.png' sur ton dépôt GitHub, à côté de 'app.py'.")
+        return None
+
+# --- 3. CLASSE PDF (UTILISE LE LOGO STABLE) ---
 class PDF(FPDF):
     def header(self):
-        if os.path.exists("logo.png"):
+        # On tente de charger le logo stable
+        logo_data = charger_logo()
+        if logo_data:
             try:
-                # FIX : On convertit l'image pour éviter l'erreur "Interlacing not supported"
-                img = Image.open("logo.png")
-                if img.mode in ("RGBA", "P") or img.info.get("interlace"):
-                    img = img.convert("RGB")
-                
-                # On passe par un buffer mémoire pour ne pas créer de fichier temporaire
-                img_buffer = io.BytesIO()
-                img.save(img_buffer, format='JPEG')
-                img_buffer.seek(0)
-                
-                self.image(img_buffer, 10, 8, 33)
+                self.image(logo_data, 10, 8, 33)
                 self.ln(15)
             except Exception as e:
-                st.warning(f"Note : Problème affichage logo sur PDF ({e})")
+                st.warning(f"Note : Impossible d'insérer le logo dans le PDF ({e})")
         
         self.set_font('Arial', 'B', 14)
         self.cell(0, 10, 'COMPTE-RENDU DE VISITE TECHNIQUE D\'EXPERTISE', 0, 1, 'C')
@@ -49,7 +66,7 @@ class PDF(FPDF):
         val = str(value if value else "---").encode('latin-1', 'replace').decode('latin-1')
         self.write(5, f"{val}\n")
 
-# --- 3. BARRE LATÉRALE ---
+# --- 4. BARRE LATÉRALE ---
 with st.sidebar:
     st.header("📸 Photos & Documents")
     st.file_uploader("Prendre photo / Bibliothèque", accept_multiple_files=True, key="photos_up")
@@ -60,7 +77,7 @@ with st.sidebar:
         st.session_state.clear()
         st.rerun()
 
-st.title(f"Expertise : {type_bien}")
+st.title(f"Expertise FD : {type_bien}")
 
 # --- SECTION 1 : DOSSIER & TECHNIQUE ---
 st.header("1. Section Dossier & Technique")
@@ -71,7 +88,7 @@ with c1:
     st.text_input("Propriétaire", key="d_prop")
     adr = st.text_input("Adresse du bien", key="d_adr")
     if adr:
-        st.markdown(f"[🔗 Google Maps](http://google.com/maps?q={adr.replace(' ', '+')})")
+        st.markdown(f"[🔗 Google Maps](http://googleusercontent.com/maps.google.com/2{adr.replace(' ', '+')})")
 with c2:
     st.subheader("🏢 Bloc Immeuble")
     st.text_input("Facteur Année (Const./Rénov.)", key="i_annee")
@@ -136,7 +153,7 @@ for idx, p in enumerate(st.session_state.pathos):
 
 st.markdown("---")
 
-# --- SECTION 5 : SURFACES (DÉPLACÉ EN BAS) ---
+# --- SECTION 5 : SURFACES ---
 st.header("5. Tableau des Surfaces")
 for i in range(st.session_state.rows):
     sc1, sc2, sc3 = st.columns([2, 1, 2])
@@ -168,8 +185,8 @@ if st.button("📄 ÉDITER LE COMPTE-RENDU FINAL"):
         pdf = PDF()
         pdf.add_page()
         pdf.section_header("Identification")
-        pdf.add_data("Client", st.session_state.d_client)
-        pdf.add_data("Adresse", st.session_state.d_adr)
+        pdf.add_data("Client", st.session_state.get('d_client'))
+        pdf.add_data("Adresse", st.session_state.get('d_adr'))
         
         pdf.section_header("Surfaces")
         for i in range(st.session_state.rows):
