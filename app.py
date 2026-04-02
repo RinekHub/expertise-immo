@@ -63,7 +63,17 @@ with c1:
     st.subheader("👤 Identification")
     st.text_input("Donneur d'ordre", key="d_client")
     st.text_input("Propriétaire", key="d_prop")
-    st.text_input("Adresse du bien", key="d_adr")
+    
+    # 1. Saisie de l'adresse
+    adr = st.text_input("Adresse du bien", key="d_adr")
+    
+    # 2. GÉNÉRATION DU LIEN GOOGLE MAPS (Le lien qui manquait)
+    if adr:
+        # On nettoie l'adresse pour l'URL
+        lien_maps = f"https://www.google.com/maps/search/?api=1&query={adr.replace(' ', '+')}"
+        st.markdown(f"📍 [Ouvrir dans Google Maps / Street View]({lien_maps})")
+    else:
+        st.caption("Saisissez une adresse pour générer le lien Maps")
 with c2:
     # 1. Le titre qui change selon le bien (Maison ou Immeuble)
     titre_bloc = "🏠 Bloc Maison" if type_bien == "Maison" else "🏢 Bloc Immeuble"
