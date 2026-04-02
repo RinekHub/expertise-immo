@@ -1,42 +1,18 @@
 import streamlit as st
 import os
-import json
 from fpdf import FPDF
 from PIL import Image
 import io
 
-# --- 1. CONFIGURATION & DOSSIER SERVEUR ---
+# --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Cabinet FD Expertise", layout="wide")
-SAVE_DIR = "sauvegardes"
-if not os.path.exists(SAVE_DIR):
-    os.makedirs(SAVE_DIR)
 
-# --- 2. LOGIQUE DE SAUVEGARDE (ANTI-PERTE) ---
-def sauver_sur_serveur():
-    """Enregistre tout le contenu du formulaire dans un fichier sur le serveur"""
-    # On capture tout ce qui est dans la session (les inputs avec des 'key')
-    data = {k: v for k, v in st.session_state.items() if not k.startswith('FormSubmitter')}
-    with open(os.path.join(SAVE_DIR, "sauvegarde_en_cours.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-def charger_depuis_serveur():
-    """Récupère les données au démarrage de l'app"""
-    path = os.path.join(SAVE_DIR, "sauvegarde_en_cours.json")
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            for k, v in data.items():
-                st.session_state[k] = v
-
-# --- 3. INITIALISATION ---
-if 'init_done' not in st.session_state:
-    charger_depuis_serveur()
-    st.session_state['init_done'] = True
-
+# --- 2. INITIALISATION DE LA MÉMOIRE ---
+# On prépare les tiroirs pour que Streamlit ne les vide jamais
 if 'pathos' not in st.session_state: st.session_state.pathos = []
 if 'rows' not in st.session_state: st.session_state.rows = 5
 
-# --- 4. CLASSE PDF ---
+# --- 3. CLASSE PDF PROFESSIONNELLE (TON SOCLE) ---
 class PDF(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
@@ -48,7 +24,13 @@ class PDF(FPDF):
                 img_temp.seek(0)
                 self.image(img_temp, 10, 8, 33)
                 self.ln(12)
-            except: pass
+            except:
+                self.set_font('Arial', 'B', 12)
+                self.cell(0, 10, 'CABINET FD EXPERTISE', 0, 1, 'L')
+        else:
+            self.set_font('Arial', 'B', 12)
+            self.cell(0, 10, 'CABINET FD EXPERTISE', 0, 1, 'L')
+        
         self.set_font('Arial', 'B', 14)
         self.cell(0, 10, 'COMPTE-RENDU DE VISITE TECHNIQUE', 0, 1, 'C')
         self.ln(5)
@@ -68,123 +50,104 @@ class PDF(FPDF):
         val = str(value if value else "---").encode('latin-1', 'replace').decode('latin-1')
         self.write(5, f"{val}\n")
 
-# --- 5. BARRE LATÉRALE ---
+# --- 4. BARRE LATÉRALE ---
 with st.sidebar:
     if os.path.exists("logo.png"): st.image("logo.png", width=150)
     st.markdown("---")
-    # Choix du bien avec sauvegarde immédiate
-    type_bien = st.radio("🏠 Type de Bien", ["Appartement", "Maison"], key="type_bien", on_change=sauver_sur_serveur)
+    # Utilisation d'une clé fixe pour que le choix Maison/Appart reste en mémoire
+    type_bien = st.radio("🏠 Type de Bien", ["Appartement", "Maison"], key="type_bien_permanent")
     st.markdown("---")
+    # Navigation simplifiée en 2 blocs pour éviter les bugs
     menu = st.radio("📍 Navigation", ["📝 1. Expertise Technique", "💰 2. Facturation & PDF"])
     st.markdown("---")
-    
-    # BOUTON RGPD : Efface la session ET le fichier serveur
-    if st.button("🗑️ EFFACER TOUTES LES DONNÉES (RGPD)", help="Supprime le fichier du serveur et vide l'app"):
+    if st.button("🗑️ NOUVEAU DOSSIER (RGPD)"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        if os.path.exists(os.path.join(SAVE_DIR, "sauvegarde_en_cours.json")):
-            os.remove(os.path.join(SAVE_DIR, "sauvegarde_en_cours.json"))
         st.rerun()
 
-# --- PAGE 1 : EXPERTISE TECHNIQUE (CONDENSÉE) ---
+# --- 5. PAGE 1 : EXPERTISE TECHNIQUE (TON SOCLE CONDENSÉ) ---
 if menu == "📝 1. Expertise Technique":
-    st.title(f"📋 Expertise : {st.session_state.get('type_bien', 'Appartement')}")
+    st.title(f"📋 Expertise : {type_bien}")
     
-    # A. DOSSIER & IMMEUBLE
-    st.subheader("1. Dossier & Immeuble")
+    st.subheader("👤 Identification & Immeuble")
     c1, c2 = st.columns(2)
     with c1:
-        st.text_input("Donneur d'ordre", key="d_client", on_change=sauver_sur_serveur)
-        st.text_input("Adresse du bien", key="d_adr", on_change=sauver_sur_serveur)
-        st.text_input("Propriétaire", key="d_prop", on_change=sauver_sur_serveur)
+        st.text_input("Donneur d'ordre", key="d_client")
+        st.text_input("Adresse du bien", key="d_adr")
+        st.text_input("Propriétaire", key="d_prop")
     with c2:
-        st.text_input("Année de construction", key="i_annee", on_change=sauver_sur_serveur)
-        st.selectbox("Situation locative", ["Libre", "Occupé", "Loué", "Vides"], key="i_loc", on_change=sauver_sur_serveur)
-        if st.session_state.get('type_bien') == "Appartement":
-            st.text_input("Étage", key="i_etage", on_change=sauver_sur_serveur)
-            st.text_input("Syndic", key="i_syndic", on_change=sauver_sur_serveur)
+        st.text_input("Année de construction", key="i_annee")
+        st.selectbox("Situation locative", ["Libre", "Occupé", "Loué", "Vides"], key="i_loc")
+        if type_bien == "Appartement":
+            st.text_input("Étage", key="i_etage")
+            st.text_input("Syndic", key="i_syndic")
         else:
-            st.text_input("Surface Terrain (m²)", key="i_terrain", on_change=sauver_sur_serveur)
-            st.text_input("Type de toiture", key="i_toit", on_change=sauver_sur_serveur)
+            st.selectbox("Assainissement", ["Tout à l'égout", "Fosse Septique", "Micro-station"], key="i_assain")
+            st.text_input("Type de toiture", key="i_toit")
+            st.text_input("Terrain (m²)", key="i_terrain")
 
-    # B. SURFACES & ANNEXES
     st.markdown("---")
-    st.subheader("2. Surfaces & Annexes")
+    st.subheader("📏 Surfaces & Annexes")
     for i in range(st.session_state.rows):
         sc1, sc2, sc3 = st.columns([2, 1, 2])
-        with sc1: st.text_input(f"Pièce {i+1}", key=f"p{i}", on_change=sauver_sur_serveur)
-        with sc2: st.number_input("m²", key=f"m{i}", step=0.01, format="%.2f", on_change=sauver_sur_serveur)
-        with sc3: st.text_input("État/Observations", key=f"r{i}", on_change=sauver_sur_serveur)
+        with sc1: st.text_input(f"Pièce {i+1}", key=f"p{i}")
+        with sc2: st.number_input("m²", key=f"m{i}", step=0.01, format="%.2f")
+        with sc3: st.text_input("État/Observations", key=f"r{i}")
     
     if st.button("➕ Ajouter une pièce"):
         st.session_state.rows += 1
-        sauver_sur_serveur()
         st.rerun()
 
-    st.multiselect("Annexes présentes", ["Garage", "Cave", "Parking", "Balcon", "Terrasse", "Grenier"], key="a_liste", on_change=sauver_sur_serveur)
+    st.multiselect("Annexes présentes", ["Garage", "Cave", "Parking", "Balcon", "Terrasse", "Grenier"], key="a_liste")
+    st.text_area("Observations détaillées annexes", key="a_obs")
 
-    # C. EXTÉRIEURS & RISQUES
     st.markdown("---")
-    st.subheader("3. Extérieurs & Risques")
-    ec1, ec2 = st.columns(2)
-    with ec1:
-        if st.session_state.get('type_bien') == "Maison":
-            st.multiselect("Équipements", ["Jardin", "Clôture", "Portail élec", "Piscine"], key="e_amen", on_change=sauver_sur_serveur)
-        st.text_area("Observations terrain / Parties Communes", key="e_comm", on_change=sauver_sur_serveur)
-    with ec2:
-        st.selectbox("Zone Sismique", ["1", "2", "3", "4", "5"], key="e_sis", on_change=sauver_sur_serveur)
-        st.checkbox("Zone inondable", key="e_inond", on_change=sauver_sur_serveur)
-
-    # D. PATHOLOGIES
-    st.markdown("---")
-    st.subheader("4. Pathologies (Désordres)")
+    st.subheader("⚠️ Pathologies")
     if st.button("➕ Ajouter un désordre"):
         st.session_state.pathos.append({"loc": "", "type": "Fissure", "grav": "🟢", "obs": ""})
-        sauver_sur_serveur()
         st.rerun()
 
     for idx, p in enumerate(st.session_state.pathos):
         with st.expander(f"Désordre n°{idx+1}", expanded=True):
-            st.session_state.pathos[idx]["loc"] = st.text_input("Lieu", key=f"ploc_{idx}", value=p["loc"], on_change=sauver_sur_serveur)
-            st.session_state.pathos[idx]["type"] = st.selectbox("Type", ["Fissure", "Humidité", "Structure", "Infiltration"], key=f"ptyp_{idx}", index=["Fissure", "Humidité", "Structure", "Infiltration"].index(p["type"]), on_change=sauver_sur_serveur)
-            st.session_state.pathos[idx]["obs"] = st.text_area("Obs.", key=f"pobs_{idx}", value=p["obs"], on_change=sauver_sur_serveur)
+            st.session_state.pathos[idx]["loc"] = st.text_input("Localisation", key=f"ploc_{idx}", value=p["loc"])
+            st.session_state.pathos[idx]["type"] = st.selectbox("Type", ["Fissure", "Humidité", "Structure", "Infiltration"], key=f"ptyp_{idx}")
+            st.session_state.pathos[idx]["grav"] = st.select_slider("Gravité", options=["🟢", "🟡", "🔴"], key=f"pgrav_{idx}")
+            st.session_state.pathos[idx]["obs"] = st.text_area("Observations", key=f"pobs_{idx}", value=p["obs"])
             if st.button(f"🗑️ Supprimer n°{idx+1}", key=f"del_{idx}"):
                 st.session_state.pathos.pop(idx)
-                sauver_sur_serveur()
                 st.rerun()
 
-# --- PAGE 2 : FACTURATION & PDF ---
+# --- 6. PAGE 2 : FACTURATION & PDF (TON SOCLE) ---
 elif menu == "💰 2. Facturation & PDF":
-    st.title("💰 Facturation & PDF")
-    
-    f1, f2, f3 = st.columns(3)
-    with f1: h_ttc = st.number_input("Honoraires TTC (€)", key="h_val", on_change=sauver_sur_serveur)
-    with f2: dist = st.number_input("Distance KM (A/R)", key="dist_val", on_change=sauver_sur_serveur)
-    with f3: t_km = st.number_input("Tarif KM (€)", value=0.60, key="tk_val", on_change=sauver_sur_serveur)
+    st.title("💰 Finalisation & PDF")
+    f1, f2 = st.columns(2)
+    with f1:
+        h_ttc = st.number_input("Hono TTC (€)", key="h_val")
+        dist = st.number_input("Distance KM (A/R)", key="dist_val")
+    with f2:
+        t_km = st.number_input("Tarif KM", value=0.60, key="tk_val")
     
     total = h_ttc + (dist * t_km)
-    st.metric("TOTAL TTC", f"{total:.2f} €")
-    st.session_state['final_total'] = total
+    st.metric("TOTAL GÉNÉRAL TTC", f"{total:.2f} €")
+    st.session_state["final_ttc"] = total
 
     st.markdown("---")
     if st.button("📄 GÉNÉRER LE RAPPORT PDF"):
-        sauver_sur_serveur()
         try:
             pdf = PDF()
             pdf.add_page()
-            pdf.section_header(f"IDENTIFICATION DU BIEN ({st.session_state.type_bien.upper()})")
-            pdf.add_data("Client", st.session_state.get('d_client', ''))
-            pdf.add_data("Adresse", st.session_state.get('d_adr', ''))
+            pdf.section_header(f"IDENTIFICATION ({type_bien.upper()})")
+            pdf.add_data("Client", st.session_state.get('d_client'))
+            pdf.add_data("Adresse", st.session_state.get('d_adr'))
             
             pdf.section_header("SURFACES")
             for i in range(st.session_state.rows):
-                p_name = st.session_state.get(f"p{i}")
-                if p_name:
-                    pdf.add_data(p_name, f"{st.session_state.get(f'm{i}', 0.0)} m2")
+                if st.session_state.get(f"p{i}"):
+                    pdf.add_data(st.session_state[f"p{i}"], f"{st.session_state.get(f'm{i}')} m2")
 
             pdf.section_header("FINANCES")
-            pdf.add_data("TOTAL TTC", f"{st.session_state.get('final_total', 0.0):.2f} Euros")
+            pdf.add_data("TOTAL TTC", f"{total:.2f} Euros")
 
             res = pdf.output(dest='S').encode('latin-1', 'replace')
-            st.download_button("📥 TÉLÉCHARGER LE PDF", res, "Expertise_FD.pdf", "application/pdf")
-        except Exception as e: st.error(f"Erreur PDF : {e}")
+            st.download_button("📥 TÉLÉCHARGER LE RAPPORT", res, "Expertise_FD.pdf", "application/pdf")
+        except Exception as e: st.error(f"Erreur : {e}")
