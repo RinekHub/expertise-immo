@@ -65,14 +65,23 @@ with c1:
     st.text_input("Propriétaire", key="d_prop")
     st.text_input("Adresse du bien", key="d_adr")
 with c2:
-    st.subheader("🏢 Bloc Immeuble")
+    # 1. Le titre qui change selon le bien (Maison ou Immeuble)
+    titre_bloc = "🏠 Bloc Maison" if type_bien == "Maison" else "🏢 Bloc Immeuble"
+    st.subheader(titre_bloc)
+    
+    # 2. Le Facteur Année (ton critère important)
     st.text_input("Facteur Année", key="i_annee")
-    st.selectbox("Situation Locative", ["Libre", "Occupé (Proprio)", "Loué", "Vides"], key="i_loc")
+    
+    # 3. La Situation Locative en Français ("Choisissez...")
+    st.selectbox("Situation Locative", ["Libre", "Occupé (Proprio)", "Loué", "Vides"], index=None, placeholder="Choisissez...", key="i_loc")
+    
+    # 4. La logique conditionnelle (Syndic pour Appart / Copro pour Maison)
     if type_bien == "Appartement":
-        st.text_input("Syndic", key="i_syndic")
+        st.text_input("Syndic (Nom / Contact)", key="i_syndic")
         st.checkbox("Ascenseur", key="i_asc")
     else:
-        st.radio("Copropriété ?", ["Non (Pleine Propriété)", "Oui (Horizontale)"], key="i_copro_m")
+        # Pour le formulaire Maison, on demande si c'est en copropriété ou non
+        st.radio("Régime de propriété", ["Non (Pleine Propriété)", "Oui (Maison en Copropriété)"], key="i_copro_m")
 
 st.markdown("---")
 
